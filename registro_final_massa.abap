@@ -18,7 +18,7 @@ REPORT ZMMR076
 
 *Tabelas---------------------------------------------------------------*
 TABLES:
-  resb.                                               "itens da reserva
+  resb.                                      "itens da reserva
 
 *Estrutura
 TYPES: BEGIN OF T_resb,
@@ -30,9 +30,10 @@ DATA: i_resb TYPE TABLE OF t_resb,
 
 *Estrutura de Tela-----------------------------------------------------*
 SELECT-OPTIONS: s_rsnum for resb-rsnum,
+  S_MATNR for resb-MATNR,
   S_WERKS for resb-WERKS OBLIGATORY,
   S_LGORT for resb-LGORT OBLIGATORY,
-" S_BWART for resb-BWART OBLIGATORY,              "Previsão de melhorias futuras
+" S_BWART for resb-BWART OBLIGATORY,         "Previsão de melhorias futuras
   S_BDTER for resb-BDTER.
 
 
@@ -51,17 +52,18 @@ START-OF-SELECTION.
 *----------------------------------------------------------------------*
 FORM SELECT_RESB .
 
-DATA: D_LINE TYPE I.
+  DATA: D_LINE TYPE I.
 
   SELECT RSNUM FROM RESB
     into table i_resb
   WHERE BWART = 913
     AND KZEAR = space
-    AND xLOEK = space
-    AND BDTER in s_BDTER
-    AND LGORT in s_LGORT
-    AND WERKS in s_WERKS
-    AND RSNUM IN s_RSNUM.
+    AND XLOEK = space
+    AND MATNR in S_MATNR
+    AND BDTER in S_BDTER
+    AND LGORT in S_LGORT
+    AND WERKS in S_WERKS
+    AND RSNUM IN S_RSNUM.
 
   SORT i_resb by rsnum.
   DELETE ADJACENT DUPLICATES FROM i_resb COMPARING rsnum.
