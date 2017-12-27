@@ -13,7 +13,8 @@
 *& Desenvolvedor:
 *&---------------------------------------------------------------------*
 
-REPORT ZMMR076.
+REPORT ZMMR076
+  NO STANDARD PAGE HEADING.                  "Não mostra o cabeçalho padrão SAP
 
 *Tabelas---------------------------------------------------------------*
 TABLES:
