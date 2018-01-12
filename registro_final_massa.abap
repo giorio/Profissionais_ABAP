@@ -6,6 +6,7 @@
 *& Versão: 1
 *& Desenvolvido em: 27/12/2017
 *& Mudança Original: C123398
+*& Documentação: MM.02.05.028 EST Flegar Registro Final em Massa - Reserva
 *&---------------------------------------------------------------------*
 *& Alterações
 *& Mudança:
@@ -14,33 +15,34 @@
 *&---------------------------------------------------------------------*
 
 REPORT ZMMR076
-  NO STANDARD PAGE HEADING.                  "Não mostra o cabeçalho padrão SAP
+  NO STANDARD PAGE HEADING                    "Não mostra o cabeçalho padrão SAP
+  MESSAGE-ID ZC.                              "Classe de Mensagens - CEMIG
 
 *Tabelas---------------------------------------------------------------*
 TABLES:
-  resb.                                      "itens da reserva
+  RESB.                                       "itens da reserva
 
 *Estrutura
-TYPES: BEGIN OF T_resb,
-  rsnum type resb-rsnum,
-    END OF t_resb.
+TYPES: BEGIN OF T_RESB,
+  RSNUM TYPE RESB-RSNUM,
+    END OF T_RESB.
 
-DATA: i_resb TYPE TABLE OF t_resb,
-      w_resb TYPE T_resb.
+DATA: I_RESB TYPE TABLE OF T_RESB,
+      W_RESB TYPE T_RESB.
 
 *Estrutura de Tela-----------------------------------------------------*
-SELECT-OPTIONS: s_rsnum for resb-rsnum,
-  S_MATNR for resb-MATNR,
-  S_WERKS for resb-WERKS OBLIGATORY,
-  S_LGORT for resb-LGORT OBLIGATORY,
-" S_BWART for resb-BWART OBLIGATORY,         "Previsão de melhorias futuras
-  S_BDTER for resb-BDTER.
+SELECTION-SCREEN BEGIN OF BLOCK A0 WITH FRAME TITLE TEXT-A00.
+SELECT-OPTIONS: S_RSNUM FOR RESB-RSNUM,
+  S_WERKS FOR RESB-WERKS OBLIGATORY,
+  S_UMLGO FOR RESB-UMLGO OBLIGATORY,
+  S_BDTER FOR RESB-BDTER.
+SELECTION-SCREEN END OF BLOCK A0.
 
 
 START-OF-SELECTION.
 
-  PERFORM select_resb.
-  PERFORM set_kzear.
+  PERFORM SELECT_RESB.
+  PERFORM SET_KZEAR.
 *&---------------------------------------------------------------------*
 *&      Form  SELECT_RESB
 *&---------------------------------------------------------------------*
@@ -55,21 +57,20 @@ FORM SELECT_RESB .
   DATA: D_LINE TYPE I.
 
   SELECT RSNUM FROM RESB
-    into table i_resb
-  WHERE BWART = 913
-    AND KZEAR = space
-    AND XLOEK = space
-    AND MATNR in S_MATNR
-    AND BDTER in S_BDTER
-    AND LGORT in S_LGORT
-    AND WERKS in S_WERKS
+    INTO TABLE I_RESB
+  WHERE BWART = '913'
+    AND KZEAR = SPACE
+    AND XLOEK = SPACE
+    AND BDTER IN S_BDTER
+    AND UMLGO IN S_UMLGO
+    AND WERKS IN S_WERKS
     AND RSNUM IN S_RSNUM.
 
-  SORT i_resb by rsnum.
-  DELETE ADJACENT DUPLICATES FROM i_resb COMPARING rsnum.
-  DESCRIBE TABLE i_resb LINES D_LINE.
+  SORT I_RESB BY RSNUM.
+  DELETE ADJACENT DUPLICATES FROM I_RESB COMPARING RSNUM.
+  DESCRIBE TABLE I_RESB LINES D_LINE.
   IF D_LINE = 0.
-    WRITE / 'Não foram localizadas reservas em aberto que atendam os parametros informados'.
+    MESSAGE E002.
     STOP.
   ENDIF.
 
@@ -85,17 +86,17 @@ ENDFORM.                    " SELECT_RESB
 *----------------------------------------------------------------------*
 FORM SET_KZEAR .
 
-  LOOP AT i_resb INTO w_resb.
+  LOOP AT I_RESB INTO W_RESB.
     CALL FUNCTION 'MD_SET_KZEAR_RESB'
       EXPORTING
-        RSNUM = w_resb-rsnum
+        RSNUM = W_RESB-RSNUM
 *       OMDVM =
       .
-    IF sy-subrc = 0.
-      WRITE: / w_resb-RSNUM, 'S'.
+    IF SY-SUBRC = 0.
+      WRITE: / 'A reserva ', W_RESB-RSNUM,' foi marcada com registro final em todos os itens.'.
       COMMIT WORK.
     ELSE.
-      WRITE: / w_resb-RSNUM, 'E'.
+      WRITE: / W_RESB-RSNUM, 'E'.
       ROLLBACK WORK.
     ENDIF.
 
