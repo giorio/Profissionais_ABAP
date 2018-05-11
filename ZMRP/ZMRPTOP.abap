@@ -5,7 +5,7 @@
 *&---------------------------------------------------------------------*
 *&  -- Documentação: --
 *&
-*& Tabelas:
+*& Tabelas internas:
 *& >> XTAB1 e XTAB1AUX -> Para levantamento das quantidades das reservas
 *& >> I_MARD e I_MARDAUX -> Para levantamento do estoque
 *& >> I_ESTOQUE -> Para analise da criticidade do material no estoque
@@ -18,8 +18,9 @@
 *&---------------------------------------------------------------------*
 
 *-Tabelas--------------------------------------------------------------*
-TABLES: RESB,
-        MARC
+TABLES: RESB,                   "Tabela de Reservas
+        MARC,                   "Tabela de Dados de centro para material
+        ZMARAH                  "Tabela de Historico da MARA e MARC
         .
 
 *-Estruturas-----------------------------------------------------------*
@@ -31,6 +32,7 @@ TYPES: BEGIN OF E_RESB1,
        MEINS TYPE RESB-MEINS,   "Unidade de medida básica
        BDMNG TYPE RESB-BDMNG,   "Quantidade necessária - Quantidade Reservada (201, 221, 231, 241, 261, 281, 913 - Saida)
        BDMNS TYPE RESB-BDMNG,   "Quantidade Reserva entrada (202, 222, 232, 242, 262, 282, 913 - Entrada)
+       NECES TYPE RESB-BDMNG,   "Quantidade Necessario antes da embalagem
        QTDE  TYPE RESB-BDMNG,   "Quantidade necessária total
  END OF E_RESB1.
 
@@ -75,8 +77,9 @@ END OF E_ZTAB.
 TYPES: BEGIN OF E_ESTOQUE,
        MATNR TYPE MARD-MATNR,   "Nº do material
        LABST TYPE MARD-LABST,   "Estoque avaliado de utilização livre
-       QTDE  TYPE RESB-BDMNG,   "Quantidade necessária total
-       CRIT  TYPE C,            "Estoque critico branco = não
+       NECES TYPE RESB-BDMNG,   "Quantidade necessária total sem Embalagem
+       QTDE  TYPE RESB-BDMNG,   "Quantidade necessária total com Embalagem
+       CRIT  TYPE C,            "Estoque critico - em branco = não; 'C' = Critico; 'Z' = Zerado; 'S' = Sem Log
 END OF E_ESTOQUE.
 
 *-Tabelas Internas-------------------------------------------------------*
@@ -102,31 +105,27 @@ DATA: BEGIN OF I_MARDAUX1 OCCURS 0,
       MATNR TYPE MARD-MATNR,
 END OF I_MARDAUX1.
 
-
-DATA: BEGIN OF I_MSG OCCURS   0,
-      MSGTYP        LIKE BDCMSGCOLL-MSGTYP,
-      TCODE         LIKE SY-TCODE,
-      MESSAGE(100)  TYPE C,
-      MATNR         TYPE RESB-MATNR,
-      LGORT         TYPE RESB-LGORT,
-      WERKS         TYPE MARD-WERKS,
- END OF I_MSG.
-
 DATA: BEGIN OF I_BDC OCCURS 0.
         INCLUDE STRUCTURE BDCDATA.
 DATA: END OF I_BDC.
 
-DATA: XTAB1 TYPE TABLE OF E_XTAB1 WITH HEADER LINE,
-      XTAB1AUX TYPE TABLE OF E_XTAB1 WITH HEADER LINE,
-      I_MARD TYPE TABLE OF E_MARD WITH HEADER LINE,
-      I_MARDAUX TYPE TABLE OF E_MARD WITH HEADER LINE,
-      I_RESB1 TYPE TABLE OF E_RESB1 WITH HEADER LINE,
-      I_RESBAUX TYPE TABLE OF E_RESB1 WITH HEADER LINE,
-      T_SERIA TYPE TABLE OF E_RESB1 WITH HEADER LINE,
-      T_NSERI TYPE TABLE OF E_RESB1 WITH HEADER LINE,
-      ZTAB TYPE TABLE OF E_ZTAB WITH HEADER LINE,
-      ZTABAUX TYPE TABLE OF E_ZTAB WITH HEADER LINE,
-      I_ESTOQUE TYPE TABLE OF E_ESTOQUE WITH HEADER LINE
+DATA: XTAB1                 TYPE TABLE OF E_XTAB1 WITH HEADER LINE,
+      XTAB1AUX              TYPE TABLE OF E_XTAB1 WITH HEADER LINE,
+      I_MARD                TYPE TABLE OF E_MARD WITH HEADER LINE,
+      I_MARDAUX             TYPE TABLE OF E_MARD WITH HEADER LINE,
+      I_RESB1               TYPE TABLE OF E_RESB1 WITH HEADER LINE,
+      I_RESBAUX             TYPE TABLE OF E_RESB1 WITH HEADER LINE,
+      T_SERIA               TYPE TABLE OF E_RESB1 WITH HEADER LINE,
+      T_NSERI               TYPE TABLE OF E_RESB1 WITH HEADER LINE,
+      T_R913                TYPE TABLE OF E_RESB1 WITH HEADER LINE,
+      ZTAB                  TYPE TABLE OF E_ZTAB WITH HEADER LINE,
+      ZTABAUX               TYPE TABLE OF E_ZTAB WITH HEADER LINE,
+      I_ESTOQUE             TYPE TABLE OF E_ESTOQUE WITH HEADER LINE,
+      RESERVATIONHEADER     LIKE          BAPI2093_RES_HEAD,
+      RESERVATIONITEMS      TYPE TABLE OF BAPI2093_RES_ITEM WITH HEADER LINE,
+      PROFITABILITYSEGMENT  TYPE TABLE OF BAPI_PROFITABILITY_SEGMENT WITH HEADER LINE,
+      RETURN                TYPE TABLE OF BAPIRET2 WITH HEADER LINE,
+      MESSAGE               TYPE TABLE OF BAPIRET2 WITH HEADER LINE
       .
 
 *-Ranges-----------------------------------------------------------------*
@@ -137,17 +136,48 @@ RANGES: XBDART FOR RESB-BDART.
 
 FIELD-SYMBOLS <FS_MARC> LIKE I_MARC.
 
+*-Constantes-----------------------------------------------------------*
+
+CONSTANTS: C_TXT_ITEM  LIKE BAPI2093_RES_ITEM-ITEM_TEXT  VALUE 'Reserva gerada pela ZMPR01'.
+
 *-Variáveis--------------------------------------------------------------*
 
-DATA: V_ESTOQUE TYPE MARD-LABST,
+DATA: V_ESTOQUE       TYPE MARD-LABST,
       V_ESTOQUEPEDIDO TYPE EKPO-MENGE,
-      V_NECES   TYPE MARD-LABST,
-      V_ARRED TYPE MARC-BSTRF.
+      V_NECES         TYPE MARD-LABST,
+      V_ARRED         TYPE MARC-BSTRF,
+      V_COR_LINHA,
+      V_FILE,
+      V_REST(10)      TYPE C,
+      RES1            LIKE RESB-BDMNG,
+      RES2            LIKE RESB-BDMNG,
+      V_MES           TYPE MONAT.
 
 *-Parâmetros de Seleção--------------------------------------------------*
 *-Tela-------------------------------------------------------------------*
 SELECTION-SCREEN BEGIN OF BLOCK A1 WITH FRAME TITLE TEXT-001.
 SELECT-OPTIONS: S_WERKS FOR RESB-WERKS NO INTERVALS NO-EXTENSION OBLIGATORY DEFAULT '5300',
-                S_LGORT FOR RESB-LGORT,
+                S_LGORT FOR RESB-LGORT OBLIGATORY,
+                S_DEPOS FOR RESB-LGORT OBLIGATORY,
                 S_MATNR FOR RESB-MATNR.
 SELECTION-SCREEN END OF BLOCK A1.
+
+SELECTION-SCREEN BEGIN OF BLOCK B1 WITH FRAME TITLE TEXT-002.
+PARAMETERS: P_REL1 RADIOBUTTON GROUP C1,
+            P_TRA1 RADIOBUTTON GROUP C1.
+SELECTION-SCREEN END OF BLOCK B1.
+
+SELECTION-SCREEN BEGIN OF BLOCK C1 WITH FRAME TITLE TEXT-003.
+PARAMETERS: P_EMAIL AS CHECKBOX DEFAULT '',
+            P_EMAIL1 TYPE STRING,
+            P_EMAIL2 TYPE STRING.
+SELECTION-SCREEN END OF BLOCK C1.
+
+INITIALIZATION.
+
+AT SELECTION-SCREEN.
+  IF NOT P_EMAIL IS INITIAL.
+    IF P_EMAIL1 IS INITIAL AND P_EMAIL2 IS INITIAL.
+      MESSAGE TEXT-004 TYPE 'E'.
+    ENDIF.
+  ENDIF.
