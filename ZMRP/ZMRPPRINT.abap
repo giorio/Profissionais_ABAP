@@ -22,6 +22,8 @@ ENDFORM.                    "F_COR_LINHA
 *----------------------------------------------------------------------*
 FORM F_PRINT1.
 
+  SORT I_RESB1 BY LGORT.
+
   LOOP AT I_RESB1.
 
     PERFORM F_COR_LINHA.
