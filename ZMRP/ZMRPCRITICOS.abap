@@ -39,9 +39,20 @@ FORM F_ANALISEESTOQUE.
     IF SY-SUBRC = 0.
       ADD I_RESB1-QTDE TO I_ESTOQUE-QTDE.
       MODIFY I_ESTOQUE TRANSPORTING QTDE WHERE MATNR = I_RESB1-MATNR.
-      IF I_ESTOQUE-LABST LE I_ESTOQUE-QTDE.
+      ADD I_RESB1-NECES TO I_ESTOQUE-NECES.
+      MODIFY I_ESTOQUE TRANSPORTING NECES WHERE MATNR = I_RESB1-MATNR.
+      IF I_ESTOQUE-LABST <= I_ESTOQUE-QTDE.
         I_ESTOQUE-CRIT = 'X'.
         MODIFY I_ESTOQUE TRANSPORTING CRIT WHERE MATNR = I_RESB1-MATNR.
+        MESSAGE  ID 'ZC'
+                 TYPE 'E'
+                 NUMBER '420'
+                 INTO MESSAGE-MESSAGE
+                 WITH I_ESTOQUE-MATNR.
+        MESSAGE-ID = 'ZC'.
+        MESSAGE-NUMBER = 420.
+        MESSAGE-TYPE = 'E'.
+        APPEND MESSAGE.
       ENDIF.
     ENDIF.
 
@@ -68,37 +79,18 @@ FORM F_ANALISECRITICO.
         READ TABLE I_ESTOQUE WITH KEY MATNR = I_RESB1-MATNR.
 
         IF SY-SUBRC = 0.
-          V_NECES = ( I_RESB1-QTDE / I_ESTOQUE-QTDE * I_ESTOQUE-LABST ).
-          CLEAR: MARC-BSTRF,
-                 V_ARRED,
-                 V_REST.
 
-          SELECT SINGLE BSTRF
-                        FROM MARC
-                        INTO MARC-BSTRF
-                        WHERE MATNR = I_RESB1-MATNR
-                        AND WERKS IN S_WERKS.
-
-          IF SY-SUBRC = 0.
-            IF V_NECES LE 1.
-              V_NECES = 1.
-            ELSEIF NOT MARC-BSTRF IS INITIAL.
-              V_ARRED = V_NECES DIV MARC-BSTRF.
-              V_REST =  V_NECES MOD MARC-BSTRF.
-
-              IF V_REST <> 0.
-                V_NECES = ( V_ARRED * MARC-BSTRF ) + MARC-BSTRF.
-              ENDIF.
-
-            ENDIF.
+          V_NECES = ( I_RESB1-NECES / I_ESTOQUE-NECES * I_ESTOQUE-LABST ).
+          IF ( V_NECES - TRUNC( V_NECES )  <  ( 1 / 2 ) ).
+            V_NECES = TRUNC( V_NECES ).
+          ELSE.
+            V_NECES = TRUNC( V_NECES ) + 1.
           ENDIF.
-
-          I_RESB1-QTDE = V_NECES.
-          MODIFY I_RESB1.
         ENDIF.
 
+        I_RESB1-QTDE = V_NECES.
+        MODIFY I_RESB1.
       ENDLOOP.
-
     ENDIF.
 
   ENDLOOP.
