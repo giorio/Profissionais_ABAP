@@ -8,25 +8,32 @@
 *& haja mais reservas que material em livre ultilização ele gera uma
 *& uma reserva 913 do deposito 3000 para o deposito que há necessidade.
 *&---------------------------------------------------------------------*
-*& Desenvolvedor: Gustavo Di Iório
+*& Desenvolvedor: Gustavo Di Iório - E208747
 *& Versão: 1
 *& Desenvolvido em: 27/12/2017
-*& Mudança Original:
+*& Mudança Original (RDM/SDM): C124925 / 8000010733
 *& Documentação:
+*& ESF:
+*& EST:
+*& TES:
+*& EVI:
 *&---------------------------------------------------------------------*
 
 REPORT ZMRP
-       NO STANDARD PAGE HEADING
-       MESSAGE-ID ZC.
+       NO STANDARD PAGE HEADING               "Retirar o cabeçalho padrão SAP
+       MESSAGE-ID ZC.                         "Classe de mensagem Z da CEMIG
 
-INCLUDE ZMRPTOP.                              "Variaveis comuns ao ZMRP
-INCLUDE ZMRPTOP_ZM137.                        "variaveis Somente da ZM137
-INCLUDE ZMRPESTOQUE.                          "Levatamento do Estoque
+**********************************************************************
+* Includes ***********************************************************
+**********************************************************************
+
+INCLUDE ZMRPTOP.                              "Variáveis comuns ao ZMRP e tela de seleção
+INCLUDE ZMRPESTOQUE.                          "Levantamento do Estoque
 INCLUDE ZMRPRESERVATIONQUATITIES.             "Quantidade reservada
 INCLUDE ZMRPPRINT.                            "Impressão
 INCLUDE ZMRPNECESTRANSF.                      "Necessidade Transferencia
 INCLUDE ZMRPTRANSF.                           "Gerar Reserva 913
-INCLUDE ZMRPCRITICOS.                         "Analisa se o estoque é critico e modifica as RESB1
+INCLUDE ZMRPCRITICOS.                         "Analisar se o estoque é critico e modifica as RESB1
 
 *-----------------------------------------------------------------------*
 START-OF-SELECTION.
