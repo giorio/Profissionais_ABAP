@@ -40,8 +40,10 @@ FORM F_SELEC_TRANSF.
       V_ESTOQUEPEDIDO = ZTAB-MENGE.
     ENDIF.
 
-*Calcula a necesssidade para gerar transferência
-    V_NECES = I_RESB1-BDMNG - ( V_ESTOQUE + I_RESB1-BDMNS + V_ESTOQUEPEDIDO ).
+*Calcula a necessidade para gerar transferência
+    I_RESB1-NECES = I_RESB1-BDMNG - ( V_ESTOQUE + I_RESB1-BDMNS + V_ESTOQUEPEDIDO ).
+    MODIFY I_RESB1.
+    V_NECES = I_RESB1-NECES.
 
 * Modificação 04/09/2012
 
