@@ -1,0 +1,36 @@
+FUNCTION ZBAPI_LGORTCODE_GETLIST.
+*"----------------------------------------------------------------------
+*"*"Interface local:
+*"  IMPORTING
+*"     VALUE(WERKS) TYPE  WERKS_D
+*"  EXPORTING
+*"     VALUE(RETURN) TYPE  BAPIRETURN
+*"  TABLES
+*"      LGORTCODE_LIST STRUCTURE  ZMMGF_HPSM_INTERGRATION_002
+*"----------------------------------------------------------------------
+
+  CLEAR: LGORTCODE_LIST,
+         LM_LGORTCODE_LIST,
+         RETURN.
+
+  REFRESH: LGORTCODE_LIST,
+           LM_LGORTCODE_LIST.
+
+  SELECT LGORT LGOBE FROM T001L
+         INTO TABLE LM_LGORTCODE_LIST
+         WHERE WERKS = WERKS.
+
+  IF SY-SUBRC <> 0.
+    FREE MESSAGE.
+    MESSAGE-MSGTY = 'E'.
+    MESSAGE-MSGID = 'ZMM'.
+    MESSAGE-MSGNO = 013.
+    PERFORM SET_RETURN_MESSAGE USING MESSAGE
+                               CHANGING RETURN.
+  ENDIF.
+  CHECK RETURN IS INITIAL.
+
+  LGORTCODE_LIST[] = LM_LGORTCODE_LIST[].
+  SORT LGORTCODE_LIST.
+
+ENDFUNCTION.
