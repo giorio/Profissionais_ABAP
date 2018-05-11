@@ -21,10 +21,12 @@
 
 FORM F_SELECT_RESERVA.
 
-*&  Para reduzir o tempo de execução do programa vai ser criado uma tabela
-*& de suporte para pegar os materias que há registro de Deposito (MARD)
+*  Para reduzir o tempo de execução do programa vai ser criado uma tabela
+* de suporte para pegar os materias que há registro de Deposito (MARD)
+* ele irá pegar o primeiro registro de cada material, excluindo os repetidos.
 
   SORT I_MARD BY MATNR.
+  FREE: I_MARDAUX1.
 
   LOOP AT I_MARD.
     AT NEW MATNR.
@@ -33,8 +35,8 @@ FORM F_SELECT_RESERVA.
     ENDAT.
   ENDLOOP.
 
-*& Gerar a tebela com dados para função MB_ADD_RESERVATION_QUANTITIES e
-*& que depois irão para I_RESB1
+*    Gerar a tebela com dados para função MB_ADD_RESERVATION_QUANTITIES e
+* que depois irão para I_RESB1
 
   SELECT MARA~MATNR MARC~WERKS MARA~MEINS MARC~SERNP
     FROM MARA AS MARA
@@ -47,7 +49,7 @@ FORM F_SELECT_RESERVA.
 
   SORT I_MARC BY MATNR WERKS.
 
-*& Função para verificar e adicionar as quantidades em reservas.
+* Função para verificar e adicionar as quantidades em reservas.
 
   LOOP AT I_MARC.
     CALL FUNCTION 'MB_ADD_RESERVATION_QUANTITIES'
@@ -68,7 +70,7 @@ FORM F_SELECT_RESERVA.
 
   ENDLOOP.
 
-*& Seleciona grupo de mercadoria do material
+* Seleciona grupo de mercadoria do material
 
   SELECT MATNR
          MATKL
@@ -77,17 +79,17 @@ FORM F_SELECT_RESERVA.
     FOR ALL ENTRIES IN I_MARD
     WHERE MATNR EQ I_MARD-MATNR.
 
-*& Seleciona equivalência de depósito/depósito de poste
+* Seleciona equivalência de depósito/depósito de poste
 
   SELECT LGORT
          UMLGO
       INTO TABLE I_ZM0007
       FROM ZM0007.
 
-*  LOOP AT XTAB1 WHERE LGORT IS NOT INITIAL.
-  LOOP AT XTAB1 WHERE LGORT IN S_LGORT.
 
-*& Preenchimento da I_RESB
+* Preenchimento da I_RESB
+
+  LOOP AT XTAB1 WHERE LGORT IN S_LGORT.
 
     READ TABLE I_MARC ASSIGNING <FS_MARC>
                                     WITH KEY MATNR = XTAB1-MATNR
@@ -104,10 +106,4 @@ FORM F_SELECT_RESERVA.
     I_RESB1-BDMNS = XTAB1-BDMNS.
     COLLECT I_RESB1.
   ENDLOOP.
-
-
-*  DELETE I_RESB1 WHERE LGORT = '3000'.
-*  DELETE I_RESB1 WHERE LGORT = '3011'.
-*  DELETE I_RESB1 WHERE LGORT = '3012'.
-
 ENDFORM.                    "F_SELECT_RESERVA
