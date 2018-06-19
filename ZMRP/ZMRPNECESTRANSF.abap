@@ -42,7 +42,7 @@ FORM F_SELEC_TRANSF.
 
 *Calcula a necessidade para gerar transferência
     I_RESB1-NECES = I_RESB1-BDMNG - ( V_ESTOQUE + I_RESB1-BDMNS + V_ESTOQUEPEDIDO ).
-    MODIFY I_RESB1.
+    MODIFY I_RESB1 TRANSPORTING NECES.
     V_NECES = I_RESB1-NECES.
 
 * Modificação 04/09/2012
@@ -64,6 +64,8 @@ FORM F_SELEC_TRANSF.
         IF V_REST <> 0.
           V_NECES = ( V_ARRED * MARC-BSTRF ) + MARC-BSTRF.
         ENDIF.
+      ELSE.
+        V_NECES = TRUNC( V_NECES ) + 1.
       ENDIF.
     ENDIF.
 
@@ -88,7 +90,7 @@ FORM F_SELEC_TRANSF.
       ENDIF.
 
       I_RESB1-QTDE = V_NECES .
-      MODIFY I_RESB1.
+      MODIFY I_RESB1 TRANSPORTING QTDE.
     ENDIF.
 
   ENDLOOP.
