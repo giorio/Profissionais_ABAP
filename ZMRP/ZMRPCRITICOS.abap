@@ -70,9 +70,15 @@ ENDFORM.                    "F_ANALISEESTOQUE
 FORM F_ANALISECRITICO.
 
   LOOP AT I_ESTOQUE.
-    CLEAR: V_NECES.
+    CLEAR: V_NECES, V_DISP.
 
     IF I_ESTOQUE-CRIT = 'X'.
+
+      IF ( I_ESTOQUE-NECES < I_ESTOQUE-LABST ).
+        V_DISP = I_ESTOQUE-NECES.
+      ELSE.
+        V_DISP = I_ESTOQUE-LABST.
+      ENDIF.
 
       LOOP AT I_RESB1 WHERE MATNR = I_ESTOQUE-MATNR.
 
@@ -80,7 +86,7 @@ FORM F_ANALISECRITICO.
 
         IF SY-SUBRC = 0.
 
-          V_NECES = ( I_RESB1-NECES / I_ESTOQUE-NECES * I_ESTOQUE-LABST ).
+          V_NECES = ( I_RESB1-NECES / I_ESTOQUE-NECES * V_DISP ).
           IF ( V_NECES - TRUNC( V_NECES )  <  ( 1 / 2 ) ).
             V_NECES = TRUNC( V_NECES ).
           ELSE.
@@ -89,10 +95,12 @@ FORM F_ANALISECRITICO.
         ENDIF.
 
         I_RESB1-QTDE = V_NECES.
-        MODIFY I_RESB1.
+        MODIFY I_RESB1 TRANSPORTING QTDE.
       ENDLOOP.
     ENDIF.
 
   ENDLOOP.
+
+  DELETE I_RESB1 WHERE QTDE = 0.
 
 ENDFORM.                    "F_AnaliseCritico
