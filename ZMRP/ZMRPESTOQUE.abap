@@ -98,7 +98,7 @@ FORM F_SELECT_ESTOQUE.
 
     IF I_ESTOQUE-LABST = 0.
       I_ESTOQUE-CRIT = 'S'.
-      MODIFY I_ESTOQUE.
+      MODIFY I_ESTOQUE TRANSPORTING CRIT.
     ENDIF.
 
     READ TABLE I_MARDAUX1 WITH KEY MATNR = I_ESTOQUE-MATNR.
@@ -106,23 +106,19 @@ FORM F_SELECT_ESTOQUE.
     IF SY-SUBRC = 0.
       IF I_ESTOQUE-LABST = 0.
         I_ESTOQUE-CRIT = 'Z'.
-        MODIFY I_ESTOQUE.
-      ENDIF.
-    ENDIF.
-
+        MODIFY I_ESTOQUE TRANSPORTING CRIT.
 *   Pega todos os materiais com marcado com 'Z' e grava na tabela de log a mensagem
 * ZC421
-
-    IF I_ESTOQUE-CRIT = 'Z'.
-      MESSAGE ID 'ZC'
+        MESSAGE ID 'ZC'
               TYPE 'E'
               NUMBER '421'
               INTO MESSAGE-MESSAGE
               WITH I_ESTOQUE-MATNR.
-      MESSAGE-ID = 'ZC'.
-      MESSAGE-NUMBER = 421.
-      MESSAGE-TYPE = 'E'.
-      APPEND MESSAGE.
+        MESSAGE-ID = 'ZC'.
+        MESSAGE-NUMBER = 421.
+        MESSAGE-TYPE = 'E'.
+        APPEND MESSAGE.
+      ENDIF.
     ENDIF.
 
   ENDLOOP.
@@ -180,7 +176,7 @@ FORM F_SELECT_ESTOQUE.
 
     IF SY-SUBRC = 0.
       I_MARD-MENGE = ZTAB-MENGE.
-      MODIFY I_MARD.
+      MODIFY I_MARD TRANSPORTING MENGE.
     ENDIF.
 
   ENDLOOP.
