@@ -2,26 +2,27 @@
 *& Report  ZMRP
 *& ZMRP - MRP para transferencia entre depositos (central > ponta)
 *&---------------------------------------------------------------------*
-*& Descrição Resumida do Programa.
+*&      Descrição Resumida do Programa.
 *&
-*& Esse programa verificar a possição do material nos depositos, e caso
+*&    Esse programa verificar a possição do material nos depositos, e caso
 *& haja mais reservas que material em livre ultilização ele gera uma
 *& uma reserva 913 do deposito 3000 para o deposito que há necessidade.
 *&---------------------------------------------------------------------*
+*& Solicitante: Gabriel Furtado Alvares - C057048
 *& Desenvolvedor: Gustavo Di Iório - E208747
 *& Versão: 1
 *& Desenvolvido em: 27/12/2017
 *& Mudança Original (RDM/SDM): C124925 / 8000010733
 *& Documentação:
-*& ESF:
-*& EST:
-*& TES:
-*& EVI:
+*& ESF: MM.02.05.028 ESF Criar reserva de transferência - ZMRP01
+*& EST: MM.02.05.028 EST Criar reserva de transferência - ZMRP01
+*& TES: MM.02.05.028 TES Criar reserva de transferência - ZMRP01
+*& EVI: MM.02.05.028 EVI Criar reserva de transferência - ZMRP01
 *&---------------------------------------------------------------------*
 
 REPORT ZMRP
        NO STANDARD PAGE HEADING               "Retirar o cabeçalho padrão SAP
-       MESSAGE-ID ZC.                         "Classe de mensagem Z da CEMIG
+       MESSAGE-ID ZC.                         "Classe de mensagem Z
 
 **********************************************************************
 * Includes ***********************************************************
@@ -32,7 +33,7 @@ INCLUDE ZMRPESTOQUE.                          "Levantamento do Estoque
 INCLUDE ZMRPRESERVATIONQUATITIES.             "Quantidade reservada
 INCLUDE ZMRPPRINT.                            "Impressão
 INCLUDE ZMRPNECESTRANSF.                      "Necessidade Transferencia
-INCLUDE ZMRPTRANSF.                           "Gerar Reserva 913
+INCLUDE ZMRPCRIAR913.                         "Gerar Reserva 913
 INCLUDE ZMRPCRITICOS.                         "Analisar se o estoque é critico e modifica as RESB1
 
 *-----------------------------------------------------------------------*
