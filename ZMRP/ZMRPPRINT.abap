@@ -35,3 +35,37 @@ FORM F_PRINT1.
   ENDLOOP.
 
 ENDFORM.                               "F_PRINT1
+
+*---------------------------------------------------------------------*
+* Envia email com Log de transações
+*---------------------------------------------------------------------*
+FORM LOG_EMAIL .
+
+  IF NOT MESSAGE[] IS INITIAL.
+
+    CALL FUNCTION 'HR_FBN_GENERATE_SEND_EMAIL'
+      EXPORTING
+        SUBJECT               = 'Log ZM137'
+        SENDER                = P_EMAIL1
+        RECIPIENT             = P_EMAIL2
+        FLAG_COMMIT           = 'X'
+        FLAG_SEND_IMMEDIATELY = 'X'
+      TABLES
+        EMAIL_TEXT            = MESSAGE.
+
+  ENDIF.
+
+ENDFORM.                    " LOG_EMAIL
+
+*&---------------------------------------------------------------------*
+*&      Form  F_LOG
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+FORM F_LOG.
+
+  LOOP AT MESSAGE.
+    WRITE: / MESSAGE-MESSAGE.
+  ENDLOOP.
+
+ENDFORM.                    "F_LOG
