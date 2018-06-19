@@ -105,10 +105,6 @@ DATA: BEGIN OF I_MARDAUX1 OCCURS 0,
       MATNR TYPE MARD-MATNR,
 END OF I_MARDAUX1.
 
-DATA: BEGIN OF I_BDC OCCURS 0.
-        INCLUDE STRUCTURE BDCDATA.
-DATA: END OF I_BDC.
-
 DATA: XTAB1                 TYPE TABLE OF E_XTAB1 WITH HEADER LINE,
       XTAB1AUX              TYPE TABLE OF E_XTAB1 WITH HEADER LINE,
       I_MARD                TYPE TABLE OF E_MARD WITH HEADER LINE,
@@ -146,12 +142,13 @@ DATA: V_ESTOQUE       TYPE MARD-LABST,
       V_ESTOQUEPEDIDO TYPE EKPO-MENGE,
       V_NECES         TYPE MARD-LABST,
       V_ARRED         TYPE MARC-BSTRF,
-      V_COR_LINHA,
-      V_FILE,
+      V_DISP          TYPE BDMNG,
       V_REST(10)      TYPE C,
-      RES1            LIKE RESB-BDMNG,
-      RES2            LIKE RESB-BDMNG,
-      V_MES           TYPE MONAT.
+      RES1            TYPE BDMNG,
+      RES2            TYPE BDMNG,
+      V_MES           TYPE MONAT,
+      V_COR_LINHA,
+      V_FILE.
 
 *-Parâmetros de Seleção--------------------------------------------------*
 *-Tela-------------------------------------------------------------------*
