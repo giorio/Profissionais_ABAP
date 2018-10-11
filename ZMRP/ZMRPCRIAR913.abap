@@ -1,30 +1,48 @@
 *&---------------------------------------------------------------------*
 *&  Include           ZMRPCRIAR913
 *&---------------------------------------------------------------------*
-FORM F_CRIA_TRANSF.
+FORM f_cria_transf.
 
-  CLEAR: T_NSERI, T_NSERI[].
-  CLEAR: T_SERIA, T_SERIA[].
-
-  T_NSERI[] = I_RESB1[].
-  T_SERIA[] = I_RESB1[].
-
-* Nao Serializados --> SERNP = BRANCO, apagar todos diferentes de branco
-  DELETE T_NSERI WHERE SERNP IS NOT INITIAL.
-  SORT T_NSERI BY DEPOS LGORT SERNP MATNR.
-  PERFORM F_CRIAR_RESERVA_913.                    "Criar reserva 913
-
-* Serializados --> SERNP <> BRANCO, apagar todos os brancos
-  DELETE T_SERIA WHERE SERNP IS INITIAL.
-  SORT T_SERIA BY DEPOS LGORT SERNP MATNR.
-  PERFORM F_CRIAR_RESERVA_913.                    "Criar reserva 913
+  CLEAR:  t_nseri, t_nseri[],
+          t_seria, t_seria[],
+          t_poste, t_poste[].
 
 
-  IF NOT P_EMAIL1 IS INITIAL AND NOT P_EMAIL2 IS INITIAL.
-    PERFORM LOG_EMAIL.
+  LOOP AT i_resb1.
+    IF i_resb1-depos <> '3000'.
+      MOVE-CORRESPONDING i_resb1 TO t_poste.
+      append t_poste.
+    ELSE.
+      IF i_resb1-sernp IS INITIAL.
+        MOVE-CORRESPONDING i_resb1 TO t_nseri.
+        APPEND t_nseri.
+      ELSEIF i_resb1-sernp IS NOT INITIAL.
+        MOVE-CORRESPONDING i_resb1 TO t_seria.
+        APPEND t_seria.
+      ENDIF.
+    ENDIF.
+  ENDLOOP.
+
+  IF lines( t_nseri ) > 0.
+    t_r913[] = t_nseri[].
+    PERFORM f_criar_reserva_913.
   ENDIF.
 
-  PERFORM F_LOG.
+  IF lines( t_seria ) > 0.
+    t_r913[] = t_seria[].
+    PERFORM f_criar_reserva_913.
+  ENDIF.
+
+  IF lines( t_poste ) > 0.
+    t_r913[] = t_poste[].
+    PERFORM f_criar_reserva_913.
+  ENDIF.
+
+  IF NOT p_email1 IS INITIAL AND NOT p_email2 IS INITIAL.
+    PERFORM log_email.
+  ENDIF.
+
+  PERFORM f_log.
 
 ENDFORM.                    "F_CRIA_TRANSF
 
@@ -34,47 +52,42 @@ ENDFORM.                    "F_CRIA_TRANSF
 *       Form para criar a estrutura e a tabela de parâmetros da BAPI
 * F_CRIAR_RESERVA_913.
 *----------------------------------------------------------------------*
-FORM F_CRIAR_RESERVA_913.
+FORM f_criar_reserva_913.
 
-  IF LINES( T_NSERI ) > 0.
-    T_R913[] = T_NSERI[].
-  ENDIF.
+  SORT t_r913 BY lgort.
 
-  IF LINES( T_SERIA ) > 0.
-    T_R913[] = T_SERIA[].
-  ENDIF.
+  LOOP AT t_r913.
 
-  SORT T_R913 BY LGORT.
+    CLEAR: reservationheader, reservationitems.
+    REFRESH: reservationitems.
 
-  LOOP AT T_R913.
+    AT NEW lgort.
 
-    CLEAR: RESERVATIONHEADER, RESERVATIONITEMS.
-    REFRESH: RESERVATIONITEMS.
+      reservationheader-res_date = sy-datum.
+      reservationheader-created_by = sy-uname.
+      reservationheader-move_type = '913'.
+      reservationheader-move_plant = '5300'.
+      reservationheader-move_stloc = t_r913-lgort.
 
-    AT NEW LGORT.
-
-      RESERVATIONHEADER-RES_DATE = SY-DATUM.
-      RESERVATIONHEADER-CREATED_BY = SY-UNAME.
-      RESERVATIONHEADER-MOVE_TYPE = '913'.
-      RESERVATIONHEADER-MOVE_PLANT = '5300'.
-      RESERVATIONHEADER-MOVE_STLOC = T_R913-LGORT.
-
-      LOOP AT T_R913 WHERE LGORT = RESERVATIONHEADER-MOVE_STLOC.
-        RESERVATIONITEMS-MATERIAL = T_R913-MATNR.
-        RESERVATIONITEMS-PLANT = S_WERKS-LOW.
-        RESERVATIONITEMS-STGE_LOC = '3000'.
-        RESERVATIONITEMS-ENTRY_QNT = T_R913-QTDE.
-        RESERVATIONITEMS-MOVEMENT = 'X'.
-        RESERVATIONITEMS-REQ_DATE = SY-DATUM.
-        RESERVATIONITEMS-ITEM_TEXT = C_TXT_ITEM.
-        APPEND RESERVATIONITEMS.
+      LOOP AT t_r913 WHERE lgort = reservationheader-move_stloc.
+        reservationitems-material = t_r913-matnr.
+        reservationitems-plant = s_werks-low.
+        reservationitems-stge_loc = t_r913-depos.
+        reservationitems-entry_qnt = t_r913-qtde.
+        reservationitems-movement = 'X'.
+        reservationitems-req_date = sy-datum.
+        reservationitems-item_text = c_txt_item.
+        APPEND reservationitems.
       ENDLOOP.
 
     ENDAT.
-
-    PERFORM CADASTRA_RESERVA.
+    SORT reservationitems by material.
+    PERFORM cadastra_reserva.
 
   ENDLOOP.
+
+
+  CLEAR: t_r913, t_r913[].
 
 ENDFORM.                    "F_CRIAR_RESERVA_913.
 
@@ -85,12 +98,12 @@ ENDFORM.                    "F_CRIAR_RESERVA_913.
 * e chama a BAPI: BAPI_RESERVATION_CREATE1, além de criar a tabela de
 * saída de mentagem.
 *----------------------------------------------------------------------*
-FORM CADASTRA_RESERVA.
-  IF LINES( RESERVATIONITEMS ) > 0.
+FORM cadastra_reserva.
+  IF lines( reservationitems ) > 0.
 *      verificar se a tabela de itens está preenchida
     CALL FUNCTION 'BAPI_RESERVATION_CREATE1'
       EXPORTING
-        RESERVATIONHEADER          = RESERVATIONHEADER
+        reservationheader          = reservationheader
 *         TESTRUN                    =
 *         ATPCHECK                   =
 *         CALCHECK                   =
@@ -98,20 +111,20 @@ FORM CADASTRA_RESERVA.
 *       IMPORTING
 *         RESERVATION                =
       TABLES
-        RESERVATIONITEMS           = RESERVATIONITEMS
-        PROFITABILITYSEGMENT       = PROFITABILITYSEGMENT
-        RETURN                     = RETURN
+        reservationitems           = reservationitems
+        profitabilitysegment       = profitabilitysegment
+        return                     = return
 *             EXTENSIONIN                =
               .
-    LOOP AT RETURN.
-      MOVE-CORRESPONDING RETURN TO MESSAGE.
-      APPEND MESSAGE.
+    LOOP AT return.
+      MOVE-CORRESPONDING return TO message.
+      APPEND message.
     ENDLOOP.
 
 
-    DELETE MESSAGE WHERE ID = 'BAPI'.
-    SORT MESSAGE BY MESSAGE.
-    DELETE ADJACENT DUPLICATES FROM MESSAGE.
+    DELETE message WHERE id = 'BAPI'.
+    SORT message BY message.
+    DELETE ADJACENT DUPLICATES FROM message.
 
     CALL FUNCTION 'BAPI_TRANSACTION_COMMIT'
 *       EXPORTING
