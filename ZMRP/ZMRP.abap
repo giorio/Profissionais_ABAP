@@ -20,77 +20,79 @@
 *& EVI: MM.02.05.028 EVI Criar reserva de transferência - ZMRP01
 *&---------------------------------------------------------------------*
 
-REPORT ZMRP
+REPORT zmrp
        NO STANDARD PAGE HEADING               "Retirar o cabeçalho padrão SAP
-       MESSAGE-ID ZC.                         "Classe de mensagem Z
+       MESSAGE-ID zc.                         "Classe de mensagem Z
 
 **********************************************************************
 * Includes ***********************************************************
 **********************************************************************
 
-INCLUDE ZMRPTOP.                              "Variáveis comuns ao ZMRP e tela de seleção
-INCLUDE ZMRPESTOQUE.                          "Levantamento do Estoque
-INCLUDE ZMRPRESERVATIONQUATITIES.             "Quantidade reservada
-INCLUDE ZMRPPRINT.                            "Impressão
-INCLUDE ZMRPNECESTRANSF.                      "Necessidade Transferencia
-INCLUDE ZMRPCRIAR913.                         "Gerar Reserva 913
-INCLUDE ZMRPCRITICOS.                         "Analisar se o estoque é critico e modifica as RESB1
+INCLUDE zmrptop.                              "Variáveis comuns ao ZMRP e tela de seleção
+INCLUDE zmrpestoque.                          "Levantamento do Estoque
+INCLUDE zmrpreservationquatities.             "Quantidade reservada
+INCLUDE zmrpprint.                            "Impressão
+INCLUDE zmrpnecestransf.                      "Necessidade Transferencia
+INCLUDE zmrpcriar913.                         "Gerar Reserva 913
+INCLUDE zmrpcriticos.                         "Analisar se o estoque é critico e modifica as RESB1
+INCLUDE zmrp_val_matnr.
 
 *-----------------------------------------------------------------------*
 START-OF-SELECTION.
 *-----------------------------------------------------------------------*
 
 *Procedimentos
+  PERFORM f_valida_matnr.
+  PERFORM f_select_estoque.
+  PERFORM f_select_reserva.
+  PERFORM f_selec_transf.
+  PERFORM f_analiseestoque.
+  PERFORM f_analisecritico.
 
-  PERFORM F_SELECT_ESTOQUE.
-  PERFORM F_SELECT_RESERVA.
-  PERFORM F_SELEC_TRANSF.
-  PERFORM F_ANALISEESTOQUE.
-  PERFORM F_ANALISECRITICO.
+  IF p_rel1 = 'X'.
 
-  IF P_REL1 = 'X'.
-
-    IF NOT I_RESB1 IS INITIAL.
-      PERFORM F_PRINT1.
+    IF NOT i_resb1 IS INITIAL.
+      PERFORM f_print1.
     ELSE.
-      MESSAGE S672.
+      MESSAGE s672.
       STOP.
     ENDIF.
 
   ENDIF.
 
-  IF P_TRA1 = 'X'.
+  IF p_tra1 = 'X'.
 
-    IF NOT I_RESB1 IS INITIAL.
+    IF NOT i_resb1 IS INITIAL.
 *& Exibe Janela quando online
-      IF SY-BATCH IS INITIAL.
+      IF sy-batch IS INITIAL.
 *& Solicita Confirmação
-        MOVE '' TO V_FILE.
+        MOVE '' TO v_file.
         CALL FUNCTION 'POPUP_TO_CONFIRM_STEP'
           EXPORTING
-            DEFAULTOPTION  = 'N'
-            TEXTLINE1      = 'Confirma geração da(s) transferência(s) ?'
+            defaultoption  = 'N'
+            textline1      = 'Confirma geração da(s) transferência(s) ?'
 *           TEXTLINE2      = ' '
-            TITEL          = 'Confirmação'
+            titel          = 'Confirmação'
 *           START_COLUMN   = 25
 *           START_ROW      = 6
 *           CANCEL_DISPLAY = 'X'
           IMPORTING
-            ANSWER         = V_FILE.
+            answer         = v_file.
 *& Se confifmação OK - Criar as reservas
-        IF  V_FILE = 'J'.
-          PERFORM F_CRIA_TRANSF.
+        IF  v_file = 'J'.
+          PERFORM f_cria_transf.
         ENDIF.
       ELSE.
-        PERFORM F_CRIA_TRANSF.
+        PERFORM f_cria_transf.
       ENDIF.
 
     ELSE.
-      MESSAGE S672.
+      MESSAGE s672.
       STOP.
     ENDIF.
 
   ENDIF.
-
-*-----------------------------------------------------------------------*
-*-----------------------------------------------------------------------*
+*
+*  wa_zmrph-dtfim = sy-datum.
+*  wa_zmrph-hrfim = sy-uzeit.
+*  MODIFY zmrph FROM wa_zmrph.
