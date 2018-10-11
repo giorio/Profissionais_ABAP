@@ -29,30 +29,30 @@
 *& para transferência.
 *----------------------------------------------------------------------*
 
-FORM F_ANALISEESTOQUE.
+FORM f_analiseestoque.
 
-  SORT I_RESB1 BY MATNR.
+  SORT i_resb1 BY matnr.
 
-  LOOP AT I_RESB1.
-    READ TABLE I_ESTOQUE WITH KEY MATNR = I_RESB1-MATNR.
+  LOOP AT i_resb1.
+    READ TABLE i_estoque WITH KEY matnr = i_resb1-matnr.
 
-    IF SY-SUBRC = 0.
-      ADD I_RESB1-QTDE TO I_ESTOQUE-QTDE.
-      MODIFY I_ESTOQUE TRANSPORTING QTDE WHERE MATNR = I_RESB1-MATNR.
-      ADD I_RESB1-NECES TO I_ESTOQUE-NECES.
-      MODIFY I_ESTOQUE TRANSPORTING NECES WHERE MATNR = I_RESB1-MATNR.
-      IF I_ESTOQUE-LABST <= I_ESTOQUE-QTDE.
-        I_ESTOQUE-CRIT = 'X'.
-        MODIFY I_ESTOQUE TRANSPORTING CRIT WHERE MATNR = I_RESB1-MATNR.
+    IF sy-subrc = 0.
+      ADD i_resb1-qtde TO i_estoque-qtde.
+      MODIFY i_estoque TRANSPORTING qtde WHERE matnr = i_resb1-matnr.
+      ADD i_resb1-neces TO i_estoque-neces.
+      MODIFY i_estoque TRANSPORTING neces WHERE matnr = i_resb1-matnr.
+      IF i_estoque-labst <= i_estoque-qtde.
+        i_estoque-crit = 'X'.
+        MODIFY i_estoque TRANSPORTING crit WHERE matnr = i_resb1-matnr.
         MESSAGE  ID 'ZC'
                  TYPE 'E'
                  NUMBER '420'
-                 INTO MESSAGE-MESSAGE
-                 WITH I_ESTOQUE-MATNR.
-        MESSAGE-ID = 'ZC'.
-        MESSAGE-NUMBER = 420.
-        MESSAGE-TYPE = 'E'.
-        APPEND MESSAGE.
+                 INTO message-message
+                 WITH i_estoque-matnr.
+        message-id = 'ZC'.
+        message-number = 420.
+        message-type = 'E'.
+        APPEND message.
       ENDIF.
     ENDIF.
 
@@ -67,40 +67,75 @@ ENDFORM.                    "F_ANALISEESTOQUE
 *& a que todos os depositos recebam as mercadoria de forma proporcional
 *& a quantidade reservada.
 *----------------------------------------------------------------------*
-FORM F_ANALISECRITICO.
+FORM f_analisecritico.
 
-  LOOP AT I_ESTOQUE.
-    CLEAR: V_NECES, V_DISP.
+  DATA: v_depos TYPE bdmng.
 
-    IF I_ESTOQUE-CRIT = 'X'.
+  LOOP AT i_estoque.
+    CLEAR: v_neces, v_disp, v_depos.
 
-      IF ( I_ESTOQUE-NECES < I_ESTOQUE-LABST ).
-        V_DISP = I_ESTOQUE-NECES.
+    IF i_estoque-crit = 'X'.
+
+      IF ( i_estoque-neces < i_estoque-labst ).
+        v_disp = i_estoque-neces.
       ELSE.
-        V_DISP = I_ESTOQUE-LABST.
+        v_disp = i_estoque-labst.
       ENDIF.
 
-      LOOP AT I_RESB1 WHERE MATNR = I_ESTOQUE-MATNR.
+      LOOP AT i_resb1 WHERE matnr = i_estoque-matnr.
 
-        READ TABLE I_ESTOQUE WITH KEY MATNR = I_RESB1-MATNR.
+        READ TABLE i_estoque WITH KEY matnr = i_resb1-matnr.
 
-        IF SY-SUBRC = 0.
+        IF sy-subrc = 0.
 
-          V_NECES = ( I_RESB1-NECES / I_ESTOQUE-NECES * V_DISP ).
-          IF ( V_NECES - TRUNC( V_NECES )  <  ( 1 / 2 ) ).
-            V_NECES = TRUNC( V_NECES ).
+          v_neces = ( i_resb1-neces / i_estoque-neces * v_disp ).
+          IF ( v_neces - trunc( v_neces )  <  ( 1 / 2 ) ).
+            v_neces = trunc( v_neces ).
           ELSE.
-            V_NECES = TRUNC( V_NECES ) + 1.
+            v_neces = trunc( v_neces ) + 1.
           ENDIF.
         ENDIF.
 
-        I_RESB1-QTDE = V_NECES.
-        MODIFY I_RESB1 TRANSPORTING QTDE.
+        i_resb1-qtde = v_neces.
+        i_resb1-atend = ( i_resb1-qtde / i_resb1-neces ) * 100.
+        MODIFY i_resb1 TRANSPORTING qtde atend.
+        v_depos = v_depos + v_neces.
       ENDLOOP.
+
+      WHILE v_depos < i_estoque-labst.
+        PERFORM f_distribui_1 USING i_estoque-matnr.
+        ADD 1 TO v_depos.
+      ENDWHILE.
+
     ENDIF.
 
   ENDLOOP.
 
-  DELETE I_RESB1 WHERE QTDE = 0.
+  DELETE i_resb1 WHERE qtde = 0.
 
 ENDFORM.                    "F_AnaliseCritico
+
+*&---------------------------------------------------------------------*
+*&      Form  F_DISTRIBUI_1
+*&---------------------------------------------------------------------*
+*   Esse subprograma irá acrescentar sempre 1 unidade no deposito com menor
+* taxa de atendimento, i_resb-atend, até o valor v_depos seja igual ao
+* i_estoque-las.
+*----------------------------------------------------------------------*
+*      -->P_I_ESTOQUE_MATNR  text
+*----------------------------------------------------------------------*
+FORM f_distribui_1  USING    p_i_estoque_matnr.
+
+  SORT i_resb1 BY matnr atend ASCENDING.
+
+  LOOP AT i_resb1 WHERE matnr = p_i_estoque_matnr AND atend > 0.
+
+    ADD 1 TO i_resb1-qtde.
+    MODIFY i_resb1 TRANSPORTING qtde.
+    EXIT.
+
+  ENDLOOP.
+
+
+
+ENDFORM.                    " F_DISTRIBUI_1
