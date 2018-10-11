@@ -19,82 +19,82 @@
 *&
 *&---------------------------------------------------------------------*
 
-FORM F_SELEC_TRANSF.
+FORM f_selec_transf.
 
-  LOOP AT I_RESB1.
+  LOOP AT i_resb1.
 
-    CLEAR: V_ESTOQUE, V_NECES, V_ESTOQUEPEDIDO.
+    CLEAR: v_estoque, v_neces, v_estoquepedido.
 
 *Lê os estoques do material no depósito
-    READ TABLE I_MARD WITH KEY MATNR = I_RESB1-MATNR
-                               LGORT = I_RESB1-LGORT.
-    IF SY-SUBRC = 0.
-      V_ESTOQUE = I_MARD-LABST + I_MARD-UMLME.
+    READ TABLE i_mard WITH KEY matnr = i_resb1-matnr
+                               lgort = i_resb1-lgort.
+    IF sy-subrc = 0.
+      v_estoque = i_mard-labst + i_mard-umlme.
     ENDIF.
 
 *Lê estoque em pedido
-    READ TABLE ZTAB WITH KEY LGORT = I_RESB1-LGORT
-                             MATNR = I_RESB1-MATNR.
+    READ TABLE ztab WITH KEY lgort = i_resb1-lgort
+                             matnr = i_resb1-matnr.
 
-    IF SY-SUBRC = 0.
-      V_ESTOQUEPEDIDO = ZTAB-MENGE.
+    IF sy-subrc = 0.
+      v_estoquepedido = ztab-menge.
     ENDIF.
 
 *Calcula a necessidade para gerar transferência
-    I_RESB1-NECES = I_RESB1-BDMNG - ( V_ESTOQUE + I_RESB1-BDMNS + V_ESTOQUEPEDIDO ).
-    MODIFY I_RESB1 TRANSPORTING NECES.
-    V_NECES = I_RESB1-NECES.
+    i_resb1-neces = i_resb1-bdmng - ( v_estoque + i_resb1-bdmns + v_estoquepedido ).
+    MODIFY i_resb1 TRANSPORTING neces.
+    v_neces = i_resb1-neces.
 
 * Modificação 04/09/2012
 
 * Início
-    CLEAR: MARC-BSTRF,
-           V_ARRED,
-           V_REST.
-    SELECT SINGLE BSTRF
-    FROM MARC
-    INTO MARC-BSTRF
-    WHERE MATNR = I_RESB1-MATNR AND
-          WERKS IN S_WERKS.
+    CLEAR: marc-bstrf,
+           v_arred,
+           v_rest.
+    SELECT SINGLE bstrf
+    FROM marc
+    INTO marc-bstrf
+    WHERE matnr = i_resb1-matnr AND
+          werks IN s_werks.
 
-    IF SY-SUBRC = 0.
-      IF NOT MARC-BSTRF IS INITIAL.
-        V_ARRED = V_NECES DIV MARC-BSTRF .
-        V_REST =  V_NECES MOD MARC-BSTRF .
-        IF V_REST <> 0.
-          V_NECES = ( V_ARRED * MARC-BSTRF ) + MARC-BSTRF.
+    IF sy-subrc = 0.
+      IF NOT marc-bstrf IS INITIAL.
+        v_arred = v_neces DIV marc-bstrf .
+        v_rest =  v_neces MOD marc-bstrf .
+        IF v_rest <> 0.
+          v_neces = ( v_arred * marc-bstrf ) + marc-bstrf.
         ENDIF.
       ELSE.
-        V_NECES = TRUNC( V_NECES ) + 1.
+        v_neces = trunc( v_neces ) + 1.
       ENDIF.
     ENDIF.
 
 * fim
 
 *Deleta itens da tabela que tem material suficiente
-    IF V_NECES LE 0.
-      DELETE I_RESB1.
+    IF v_neces LE 0.
+      DELETE i_resb1.
     ELSE.
 
 *Busca o grupo do material - (poste - 54)
-      READ TABLE I_MARA WITH KEY MATNR = I_RESB1-MATNR.
+      READ TABLE i_mara WITH KEY matnr = i_resb1-matnr.
 
-      IF I_MARA-MATKL EQ '5409' OR I_MARA-MATKL EQ '5410' OR I_MARA-MATKL EQ '5411' OR I_MARA-MATKL EQ '5412' OR
-         I_MARA-MATKL EQ '5414' OR I_MARA-MATKL EQ '5510'.
+      IF i_mara-matkl EQ '5409' OR i_mara-matkl EQ '5410' OR i_mara-matkl EQ '5411' OR i_mara-matkl EQ '5412' OR
+         i_mara-matkl EQ '5414' OR i_mara-matkl EQ '5510'.
 
 *Busca o CDP que abastecerá o dep. empreiteiro
-        READ TABLE I_ZM0007 WITH KEY LGORT = I_RESB1-LGORT.
-        I_RESB1-DEPOS = I_ZM0007-UMLGO.
+        READ TABLE i_zm0007 WITH KEY lgort = i_resb1-lgort.
+        i_resb1-depos = i_zm0007-umlgo.
       ELSE.
-        I_RESB1-DEPOS = '3000'.
+        i_resb1-depos = '3000'.
       ENDIF.
 
-      I_RESB1-QTDE = V_NECES .
-      MODIFY I_RESB1 TRANSPORTING QTDE.
+      i_resb1-qtde = v_neces .
+      MODIFY i_resb1 TRANSPORTING depos qtde.
     ENDIF.
 
   ENDLOOP.
 
-  SORT I_RESB1 BY DEPOS LGORT SERNP MATNR.
+  SORT i_resb1 BY depos lgort sernp matnr.
 
 ENDFORM.                    "F_SELEC_TRANSF
