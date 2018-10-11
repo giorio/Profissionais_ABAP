@@ -20,56 +20,48 @@
 *&
 *&---------------------------------------------------------------------*
 
-FORM F_SELECT_ESTOQUE.
+FORM f_select_estoque.
 
 *   Recupera a posição de estoque de todos os materiais nos
 * depositos informados.
 
-  SELECT MARD~MATNR
-         MARD~WERKS
-         MARD~LGORT
-         MARD~LABST
-         MARD~UMLME
-         MARD~INSME
-         MARD~EINME
-         MARD~SPEME
-         MARD~RETME
-         MARD~VMLAB
-         MARD~VMUML
-         MARD~VMINS
-         MARD~VMEIN
-         MARD~VMSPE
-         MARD~VMRET
-         MARA~MEINS
-         INTO TABLE I_MARD
-         FROM MARD AS MARD
-         INNER JOIN MARA AS MARA
-         ON MARD~MATNR = MARA~MATNR
-         WHERE MARD~MATNR IN S_MATNR AND
-               MARD~WERKS IN S_WERKS AND
-               MARD~LGORT IN S_LGORT OR
-               MARD~MATNR IN S_MATNR AND
-               MARD~WERKS IN S_WERKS AND
-               MARD~LGORT IN S_DEPOS.
+  SELECT mard~matnr
+         mard~werks
+         mard~lgort
+         mard~labst
+         mard~umlme
+         mara~meins
+         INTO TABLE i_mard
+         FROM mard AS mard
+         INNER JOIN mara AS mara
+         ON mard~matnr = mara~matnr
+         WHERE mard~matnr IN s_matnr
+         AND mard~werks IN s_werks
+         AND (
+              mard~lgort IN s_lgort
+              OR
+               mard~lgort IN s_depos
+              ).
 
-  IF SY-SUBRC NE 0.
-    MESSAGE S002(ZC).
+  IF sy-subrc NE 0.
+    MESSAGE s002(zc).
     STOP.
   ENDIF.
 
-  SORT I_MARD BY MATNR LGORT.
+  SORT i_mard BY matnr lgort.
+  DELETE i_mard WHERE matnr NOT IN rg_matnr.
 
 *& Inicia o prenchimento da tabela de I_ESTOQUE que irá ser
 *& usada para verificar se o material está critico ou não
 
-  FREE I_ESTOQUE.
+  FREE i_estoque.
 
-  LOOP AT I_MARD WHERE LGORT IN S_DEPOS.
+  LOOP AT i_mard WHERE lgort IN s_depos.
 
-    I_ESTOQUE-MATNR = I_MARD-MATNR.
-    I_ESTOQUE-LABST = I_MARD-LABST.
+    i_estoque-matnr = i_mard-matnr.
+    i_estoque-labst = i_mard-labst.
 
-    COLLECT I_ESTOQUE.
+    COLLECT i_estoque.
 
   ENDLOOP.
 
@@ -78,105 +70,105 @@ FORM F_SELECT_ESTOQUE.
 * o último registro valido do material. Uma vez que apenas materiais
 * ERSA e HIBE com status N* tem relevancia para o log.
 
-  V_MES = SY-DATUM+4(2) - 1.
+  v_mes = sy-datum+4(2) - 1.
 
-  FREE: I_MARDAUX1.
-  SELECT MATNR
-         INTO TABLE I_MARDAUX1
-         FROM ZMARAH
-         WHERE GJAHR = SY-DATUM(4)
-         AND  LFMON = V_MES
-         AND WERKS IN S_WERKS.
+  FREE: i_mardaux1.
+  SELECT matnr
+         INTO TABLE i_mardaux1
+         FROM zmarah
+         WHERE gjahr = sy-datum(4)
+         AND  lfmon = v_mes
+         AND werks IN s_werks.
 
-  SORT I_MARDAUX1 BY MATNR.
+  SORT i_mardaux1 BY matnr.
 
-  LOOP AT I_ESTOQUE.
+  LOOP AT i_estoque.
 
 *   Materiais com estoque 0 recebem inicialmente o campo I_ESTOQUE-CRIT a letra
 * 'S', caso o material esteja contido no tabela I_MARDAUX1, resultado do select
 * da ZMARAH ele troca para 'Z' e irá gerar a mensagem de estoque zerado.
 
-    IF I_ESTOQUE-LABST = 0.
-      I_ESTOQUE-CRIT = 'S'.
-      MODIFY I_ESTOQUE TRANSPORTING CRIT.
+    IF i_estoque-labst = 0.
+      i_estoque-crit = 'S'.
+      MODIFY i_estoque TRANSPORTING crit.
     ENDIF.
 
-    READ TABLE I_MARDAUX1 WITH KEY MATNR = I_ESTOQUE-MATNR.
+    READ TABLE i_mardaux1 WITH KEY matnr = i_estoque-matnr.
 
-    IF SY-SUBRC = 0.
-      IF I_ESTOQUE-LABST = 0.
-        I_ESTOQUE-CRIT = 'Z'.
-        MODIFY I_ESTOQUE TRANSPORTING CRIT.
+    IF sy-subrc = 0.
+      IF i_estoque-labst = 0.
+        i_estoque-crit = 'Z'.
+        MODIFY i_estoque TRANSPORTING crit.
 *   Pega todos os materiais com marcado com 'Z' e grava na tabela de log a mensagem
 * ZC421
         MESSAGE ID 'ZC'
               TYPE 'E'
               NUMBER '421'
-              INTO MESSAGE-MESSAGE
-              WITH I_ESTOQUE-MATNR.
-        MESSAGE-ID = 'ZC'.
-        MESSAGE-NUMBER = 421.
-        MESSAGE-TYPE = 'E'.
-        APPEND MESSAGE.
+              INTO message-message
+              WITH i_estoque-matnr.
+        message-id = 'ZC'.
+        message-number = 421.
+        message-type = 'E'.
+        APPEND message.
       ENDIF.
     ENDIF.
 
   ENDLOOP.
 
-  LOOP AT I_MARD.
-    READ TABLE I_ESTOQUE WITH KEY MATNR = I_MARD-MATNR.
+  LOOP AT i_mard.
+    READ TABLE i_estoque WITH KEY matnr = i_mard-matnr.
 
 *   Exclui o material que estiver zerado nos estoques supridores, não gerando assim
 * as reservas para eles. O programa não irá consultar nenhum outro dados.
 
-    IF SY-SUBRC = 0.
-      IF I_ESTOQUE-LABST = 0.
-        DELETE I_MARD.
+    IF sy-subrc = 0.
+      IF i_estoque-labst = 0.
+        DELETE i_mard.
       ENDIF.
 
     ENDIF.
 
   ENDLOOP.
 
-  DELETE I_MARD WHERE LGORT IN S_DEPOS.
+  DELETE i_mard WHERE lgort IN s_depos.
 
 *& Vai buscar o estoque em pedido de compra, pedido gravado com
 *& deposito de recebimento.
 
-  I_MARDAUX[] = I_MARD[].
+  i_mardaux[] = i_mard[].
 
-  LOOP AT I_MARDAUX.
-    FREE: ZTABAUX.
+  LOOP AT i_mardaux.
+    FREE: ztabaux.
 
     CALL FUNCTION 'MB_ADD_PURCHASE_ORDER_QUANTITY'
       EXPORTING
-        X_ELIKZ = SPACE
-        X_LOEKZ = SPACE
-        X_MATNR = I_MARDAUX-MATNR
-        X_MEINS = I_MARDAUX-MEINS
+        x_elikz = space
+        x_loekz = space
+        x_matnr = i_mardaux-matnr
+        x_meins = i_mardaux-meins
       TABLES
-        XTAB    = ZTABAUX
-        XWERKS  = S_WERKS.
+        xtab    = ztabaux
+        xwerks  = s_werks.
 
-    LOOP AT ZTABAUX.
-      APPEND ZTABAUX TO ZTAB.
+    LOOP AT ztabaux.
+      APPEND ztabaux TO ztab.
     ENDLOOP.
 
   ENDLOOP.
 
-  SORT ZTAB BY MATNR LGORT.
+  SORT ztab BY matnr lgort.
 
 *& Incoporar o resultado da função MB_ADD_PURCHASE_ORDER_QUANTITY
 *& na tabela I_MARD
 
-  LOOP AT I_MARD.
-    READ TABLE ZTAB WITH KEY MATNR = I_MARD-MATNR
-                             WERKS = I_MARD-WERKS
-                             LGORT = I_MARD-LGORT.
+  LOOP AT i_mard.
+    READ TABLE ztab WITH KEY matnr = i_mard-matnr
+                             werks = i_mard-werks
+                             lgort = i_mard-lgort.
 
-    IF SY-SUBRC = 0.
-      I_MARD-MENGE = ZTAB-MENGE.
-      MODIFY I_MARD TRANSPORTING MENGE.
+    IF sy-subrc = 0.
+      i_mard-menge = ztab-menge.
+      MODIFY i_mard TRANSPORTING menge.
     ENDIF.
 
   ENDLOOP.
