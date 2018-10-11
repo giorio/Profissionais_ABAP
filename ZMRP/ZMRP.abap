@@ -35,7 +35,7 @@ INCLUDE zmrpprint.                            "Impressão
 INCLUDE zmrpnecestransf.                      "Necessidade Transferencia
 INCLUDE zmrpcriar913.                         "Gerar Reserva 913
 INCLUDE zmrpcriticos.                         "Analisar se o estoque é critico e modifica as RESB1
-INCLUDE zmrp_val_matnr.
+INCLUDE zmrp_val_matnr.                       "Seleocionar materiais com MSTAE = ( N* or U* or X* )
 
 *-----------------------------------------------------------------------*
 START-OF-SELECTION.
@@ -92,7 +92,3 @@ START-OF-SELECTION.
     ENDIF.
 
   ENDIF.
-*
-*  wa_zmrph-dtfim = sy-datum.
-*  wa_zmrph-hrfim = sy-uzeit.
-*  MODIFY zmrph FROM wa_zmrph.
