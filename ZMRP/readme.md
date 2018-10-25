@@ -52,3 +52,39 @@ Neste caso, deverá ser desconsiderado o arredondamento do material e considerad
 •	Caso a necessidade total sem embalagem for menor ou igual ao estoque total o valor a ser considerado para uso da distribuição crítica será a necessidade caso contrário considerar a disponibilidade de estoque;
 •	A quantidade da reserva a ser criada para o depósito é igual a: 
 o	[(necessidade do depósito sem arredondamento) / (necessidade de todos os depósitos sem arredondamento)] * o valor definido no item acima.
+
+-- X --
+
+Alteração 01.
+
+Possibilitar a criação das reservas do tipo 913, via transação ZMRP01, para matérias de grupo de mercadoria que tem o depósito supridor diferente do dpósito principal.
+
+-- X --
+
+Alteração 02.
+
+Se o material for crítico:
+Como o material é crítico, após a proporcionalizarão das reservas, não deve sobrar NENHUMA unidade nos depósitos supridores.
+Após a criação das reservas para o material crítico, deve ser realizada uma verificação se restou material no depósito supridor.
+Se (SOMA DAS RESERVAS PROPORCIONAIS CRIADAS) < (ESTOQUE TOTAL NOS DEPÓSITOS SUPRIDORES)
+Loop enquanto (SOMA DAS RESERVAS PROPORCIONAIS CRIADAS) < (ESTOQUE TOTAL NOS DEPÓSITOS SUPRIDORES)
+		Verificar qual o depósito está “menos” atendidos dentre todos.
+		(QUANTIDADE 913 SENDO CRIADA NO DEPÓSITO) / (QUANTIDADE 913 NECESSÁRIA PARA ATENDIMENTO TOTAL DO DEPÓSITO)
+		O depósito com o menor % do cálculo acima será o “menos” atendido
+		Verificar se o depósito não está 100% atendido
+Se (ESTOQUE LIVRE + TRANSFERÊNCIAS + PEDIDOS – RESERVAS 261 NO SAP – RESERVAS 913 NO SAP – RESERVAS PROPORCIONAIS ATÉ O MOMENTO + 1) < 0
+Aumentar em 01 UNIDADE a “RESERVA PROPORCIONAL ATÉ O MOMENTO” do depósito
+		Se não
+			Passar para o segundo depósito “menos” atendido
+	End loop
+Senão
+	Passar para o próximo material. Continuar a execução do programa.
+  
+  -- X --
+  
+  Alteração 03.
+  
+Reduzir o escopo de execução da transação ZMRP01 para materiais com seu status iniciado em "N", "U" ou "X".
+
+A ZMRP01 não deve executar suas funções em materiais que não possuem estes status.
+
